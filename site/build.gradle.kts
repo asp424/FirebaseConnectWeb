@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kobweb.application)
     // alias(libs.plugins.kobwebx.markdown)
-}
 
+}
 group = "dev.test.ru"
 version = "1.0-SNAPSHOT"
 
@@ -20,7 +20,6 @@ kobweb {
 
 kotlin {
     configAsKobwebApplication("ru")
-
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -32,6 +31,8 @@ kotlin {
                 implementation("dev.gitlive:firebase-common:1.10.4")
                 implementation("dev.gitlive:firebase-storage:1.10.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("dev.whyoleg.cryptography:cryptography-core:0.2.0")
+                implementation("dev.whyoleg.cryptography:cryptography-provider-webcrypto:0.2.0")
 
             }
         }
@@ -42,8 +43,9 @@ kotlin {
                 implementation(libs.kobweb.core)
                 implementation(libs.kobweb.silk)
                 implementation(libs.silk.icons.fa)
-                // implementation(libs.kobwebx.markdown)
+                implementation("com.ionspin.kotlin:multiplatform-crypto-libsodium-bindings:0.9.0")
 
+                // implementation(libs.kobwebx.markdown)
             }
         }
     }

@@ -11,6 +11,7 @@ import com.varabyte.kobweb.compose.ui.modifiers.border
 import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
 import com.varabyte.kobweb.compose.ui.modifiers.fillMaxSize
 import com.varabyte.kobweb.compose.ui.modifiers.height
+import com.varabyte.kobweb.compose.ui.modifiers.margin
 import com.varabyte.kobweb.compose.ui.modifiers.onClick
 import com.varabyte.kobweb.compose.ui.modifiers.padding
 import com.varabyte.kobweb.compose.ui.modifiers.width
@@ -32,21 +33,17 @@ fun UserCard(
     userModel: UserModel, onClick: () -> Unit
 ) {
     with(userModel) {
-        Div({
-            style {
-                paddingBottom(5.px)
-            }
-        }) {
             Box(
                 modifier = Modifier.fillMaxSize().background(White)
                     .border(1.px, LineStyle.Dashed, Black)
                     .borderRadius(10.px).onClick {
                         onClick()
                     }
-                    .width(230.px).height(50.px).padding(left = 10.px), contentAlignment = Alignment.CenterStart
+                    .width(230.px).height(50.px), contentAlignment = Alignment.CenterStart
             ) {
                 Image(iconUri, width = 35, height = 35,
-                    modifier = Modifier.border(1.px, LineStyle.Outset, color = Black).borderRadius(30.px)
+                    modifier = Modifier.border(1.px, LineStyle.Outset, color = Black)
+                        .borderRadius(30.px).margin(left = 7.px)
                 )
                 P({
                     style {
@@ -72,9 +69,7 @@ fun UserCard(
                     }) {
                         SpanText(if (onLine != "0") "в сети" else "не в сети")
                     }
-
                 }
             }
-        }
     }
 }
