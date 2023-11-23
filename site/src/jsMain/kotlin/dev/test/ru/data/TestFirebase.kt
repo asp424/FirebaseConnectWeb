@@ -2,7 +2,6 @@ package dev.test.ru.data
 
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.FirebaseOptions
-import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.database.DataSnapshot
 import dev.gitlive.firebase.database.database
@@ -12,30 +11,47 @@ import dev.test.ru.data.models.Nodes
 import dev.test.ru.models.UserModel
 import dev.test.ru.states.UIStates.firebaseData
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-private val databaseReference by lazy {
-    Firebase.database(
-        Firebase.initialize(
-            options = FirebaseOptions(
-                "1:700634303386:android:2c1fd690f6d6765f230823",
-                "AIzaSyBtEPcoy53H9Ni3zrox_7S7swSzv3Jnzow",
-                "https://fir-connect-a05e5-default-rtdb.firebaseio.com",
-                projectId = "fir-connect-a05e5"
+private val databaseReference by lazy { Firebase.database(initialize()).reference() }
 
-            )
+fun initialize() =
+    Firebase.initialize(
+        options = FirebaseOptions(
+            "1:700634303386:web:f83039127b4258a3230823",
+            "AIzaSyDz5DCugxU4N6pkxzAH-LL95QWcglUFyp0",
+            "https://fir-connect-a05e5-default-rtdb.firebaseio.com",
+            "fir-connect-a05e5",
+            "fir-connect-a05e5.appspot.com",
+            "fir-connect-a05e5",
+            "700634303386",
+            "fir-connect-a05e5.firebaseapp.com"
         )
-    ).reference()
+    )
+
+val fBAuth by lazy { Firebase.auth(initialize()) }
+
+fun setAuthStateListener(status: (String) -> Unit) {
+    mainListJob.cancel()
+    mainListJob = CoroutineScope(Default).launch {
+        fBAuth.authStateChanged.collect {
+            status(
+                when (it) {
+                    null -> "1"
+                    else -> "2"
+                }
+            )
+        }
+    }
 }
 
 var mainListJob: Job = Job().apply { cancel() }
 
 fun startMainListListener() {
     mainListJob.cancel()
-    mainListJob = CoroutineScope(Dispatchers.Default).launch {
+    mainListJob = CoroutineScope(Default).launch {
         databaseReference.valueEvents.collect {
             firebaseData.value = it.children.map { u -> u.getUserModel("") }
         }
@@ -60,6 +76,14 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
 
 fun DataSnapshot.getValue(path: String, node: Nodes) =
     child(node.node()).child(path).value?.run { toString() } ?: ""
+
+suspend fun authWithEmail(email: String, password: String) {
+    fBAuth.createUserWithEmailAndPassword(email, password)
+}
+
+suspend fun signInWithEmail(email: String, password: String) {
+    fBAuth.signInWithEmailAndPassword(email, password)
+}
 
 const val F_U_S = "<f>"
 const val F_U_E = "<*f>"
@@ -112,11 +136,5 @@ const val REJECTED_CALL = "rejectedCall"
 const val VOICE = "voice"
 const val VIDEO = "video"
 
-fun checkForAuth() = Firebase.auth.currentUser?.uid != null
 
-suspend fun authWithEmail(email: String, password: String) {
-    Firebase.auth.createUserWithEmailAndPassword(email, password).user.apply {
-        
-    }
-}
 

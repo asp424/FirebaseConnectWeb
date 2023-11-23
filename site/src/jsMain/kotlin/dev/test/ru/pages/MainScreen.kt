@@ -1,3 +1,5 @@
+package dev.test.ru.pages
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,9 +24,12 @@ import com.varabyte.kobweb.compose.ui.modifiers.onClick
 import com.varabyte.kobweb.compose.ui.modifiers.padding
 import com.varabyte.kobweb.compose.ui.modifiers.size
 import com.varabyte.kobweb.compose.ui.modifiers.width
+import com.varabyte.kobweb.silk.components.graphics.Image
 import com.varabyte.kobweb.silk.components.icons.ArrowForwardIcon
+import dev.test.ru.data.startMainListListener
 import dev.test.ru.models.UserCard
 import dev.test.ru.states.UIStates.firebaseData
+import dev.test.ru.states.UIStates.mainScreenIsVisible
 import org.jetbrains.compose.web.css.LineStyle.Companion.Groove
 import org.jetbrains.compose.web.css.color
 import org.jetbrains.compose.web.css.height
@@ -39,6 +44,11 @@ fun MainScreen(onClick: () -> Unit = {}) {
     var textMessage by remember {
         mutableStateOf("")
     }
+    startMainListListener()
+    Image(
+        "https://fotorelax.ru/wp-content/uploads/2016/02/Beautiful-photos-and-pictures-on-different-topics-01.jpg",
+        modifier = Modifier.fillMaxSize()
+    )
     Box(modifier = Modifier.fillMaxSize().background(LightGrey).padding(left = 290.px))
 
     Box(
@@ -68,7 +78,10 @@ fun MainScreen(onClick: () -> Unit = {}) {
                     .background(CadetBlue),
                 contentAlignment = Alignment.Center
             )
-            Box(modifier = Modifier.fillMaxSize().padding(bottom = 30.px), contentAlignment = Alignment.BottomCenter) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(bottom = 30.px),
+                contentAlignment = Alignment.BottomCenter
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextInput(textMessage) {
                         style {

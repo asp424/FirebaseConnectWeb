@@ -31,9 +31,8 @@ kotlin {
                 // implementation("dev.gitlive:firebase-messaging:1.10.4")
                 implementation("dev.gitlive:firebase-common:1.10.4")
                 implementation("dev.gitlive:firebase-storage:1.10.4")
-                implementation("com.google.code.gson:gson:2.10.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-                implementation("media.kamel:kamel-image:0.8.3")
+
             }
         }
 
@@ -44,6 +43,7 @@ kotlin {
                 implementation(libs.kobweb.silk)
                 implementation(libs.silk.icons.fa)
                 // implementation(libs.kobwebx.markdown)
+
             }
         }
     }
