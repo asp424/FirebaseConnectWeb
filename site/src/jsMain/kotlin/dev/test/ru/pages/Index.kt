@@ -16,7 +16,7 @@ import org.jetbrains.compose.web.dom.Progress
 @Page
 @Composable
 fun HomePage() {
-    LaunchedEffect(true) {
+    LaunchedEffect(Unit) {
         setAuthStateListener {
             mainScreenIsVisible.value = it
         }

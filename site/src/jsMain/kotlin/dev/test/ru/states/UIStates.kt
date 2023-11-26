@@ -10,5 +10,6 @@ object UIStates {
     var getStatus = mutableStateOf("")
     var encodedText = mutableStateOf("ass")
     var mainScreenIsVisible = mutableStateOf("0")
-    var myDigit = ""
+    var myDigit = "32532"
+    var chatUserDigit = ""
 }

@@ -35,7 +35,7 @@ fun UserCard(
     with(userModel) {
             Box(
                 modifier = Modifier.fillMaxSize().background(White)
-                    .border(1.px, LineStyle.Dashed, Black)
+                    .border(1.px, LineStyle.Outset, Black)
                     .borderRadius(10.px).onClick {
                         onClick()
                     }
@@ -68,6 +68,7 @@ fun UserCard(
 
                     }) {
                         SpanText(if (onLine != "0") "в сети" else "не в сети")
+                        SpanText(id)
                     }
                 }
             }

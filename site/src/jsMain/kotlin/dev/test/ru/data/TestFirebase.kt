@@ -1,10 +1,6 @@
 package dev.test.ru.data
 
 import androidx.compose.ui.unit.dp
-import com.ionspin.kotlin.crypto.secretbox.SecretBox
-import com.ionspin.kotlin.crypto.util.LibsodiumRandom
-import com.ionspin.kotlin.crypto.util.decodeFromUByteArray
-import com.ionspin.kotlin.crypto.util.encodeToUByteArray
 import com.lm.firebaseconnect.models.TypeMessage
 import com.varabyte.kobweb.compose.ui.Alignment
 import com.varabyte.kobweb.compose.ui.graphics.Colors.Gray
@@ -15,28 +11,19 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.database.DataSnapshot
 import dev.gitlive.firebase.database.database
 import dev.gitlive.firebase.initialize
-import dev.test.ru.data.models.ImageModel
-import dev.test.ru.data.models.LoadImageStates
-import dev.test.ru.data.models.Locations
-import dev.test.ru.data.models.MessageModel
-import dev.test.ru.data.models.Nodes
+import dev.test.ru.data.models.*
 import dev.test.ru.models.UserModel
+import dev.test.ru.states.UIStates.chatUserDigit
 import dev.test.ru.states.UIStates.encodedText
+import dev.test.ru.states.UIStates.getStatus
 import dev.test.ru.states.UIStates.mainListUsers
 import dev.test.ru.states.UIStates.myDigit
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.algorithms.digest.SHA512
-import dev.whyoleg.cryptography.algorithms.symmetric.AES
-import dev.whyoleg.cryptography.algorithms.symmetric.SymmetricKeySize
-import dev.whyoleg.cryptography.providers.webcrypto.WebCrypto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val databaseReference by lazy { Firebase.database(initialize()).reference() }
-
 fun initialize() =
     Firebase.initialize(
         options = FirebaseOptions(
@@ -54,14 +41,21 @@ fun initialize() =
 val fBAuth by lazy { Firebase.auth(initialize()) }
 
 fun setAuthStateListener(status: (String) -> Unit) {
-
     statusJob.cancel()
     statusJob = CoroutineScope(Default).launch {
         fBAuth.authStateChanged.collect {
             status(
                 when (it) {
                     null -> "1"
-                    else -> "2"
+                    else -> "2".apply {
+                        it.uid.apply {
+                            checkId?.also { myId ->
+                                myDigit = myId
+                                encodedText.value = "ID: $myId"
+
+                            }
+                        }
+                    }
                 }
             )
         }
@@ -71,12 +65,6 @@ fun setAuthStateListener(status: (String) -> Unit) {
 fun signOut() {
     CoroutineScope(Default).launch {
         fBAuth.signOut()
-    }
-}
-
-val getUid by lazy {
-    fBAuth.currentUser?.uid?.apply {
-        checkId?.also { myId -> myDigit = myId }
     }
 }
 
@@ -115,79 +103,48 @@ fun startMainListListener() {
     }
 }
 
-private fun startMessagesListener(userDigit: String, onDone: List<MessageModel>.() -> Unit) =
+fun startMessagesListener(onDone: List<MessageModel>.() -> Unit) =
     CoroutineScope(Default).launch {
-        databaseReference.child(Nodes.CHATS.node())
-            .child(userDigit.getPairPath(myDigit)).valueEvents.collect {
-                var prevDate = ""
-                onDone(it.children.map { v ->
-                    val message = v.value.toString()
-                    val key = v.key.toString()
-                    message.getMessageModel(key, prevDate).apply {
-                        //  prevDate = with(firebaseSave.timeConverter) {
-                        //     formatDate(message.parseTimestamp())
-                        // }
-                    }
-                })
-            }
-    }
+            databaseReference.child(Nodes.CHATS.node())
+                .child(chatUserDigit.getPairPath("32532")).valueEvents.collect {
+                    var prevDate = ""
+                    onDone(it.children.map { v ->
+                        val message = v.value.toString().decrypting()
+                        val key = v.key.toString()
+                        message.getMessageModel(key, prevDate).apply {
+                            //  prevDate = with(firebaseSave.timeConverter) {
+                            //     formatDate(message.parseTimestamp())
+                            // }
+                        }
+                    })
+                }
+        }
 
-private fun String.encrypt(encrypted: (String) -> Unit) {
-    encodeText(this) {
-        encrypted(it.ifEmpty { "Сообщений пока нет" })
-    }
+external fun require(module: String): dynamic
+
+fun encrypt(normal: String): String {
+    val cryptoJS = require("crypto-js")
+    val key = cryptoJS.enc.Base64.parse("b/Gu5posvwDsXjfirtaq4g==")
+    val iv = cryptoJS.enc.Base64.parse("5D9r9ZVzEYYgha93/aUK2w==")
+    return js("cryptoJS.AES.encrypt(normal, key, { iv: iv}).toString()") as String
 }
 
-@OptIn(ExperimentalUnsignedTypes::class)
-fun encodeText(text: String = "ass", encoded: (String) -> Unit) {
-    CoroutineScope(Default).launch {
-        val message = ("Ladies and Gentlemen of the class of '99: If I could offer you " +
-                "only one tip for the future, sunscreen would be it.").encodeToUByteArray()
-        val key = LibsodiumRandom.buf(32)
-
-        val nonce = LibsodiumRandom.buf(24)
-
-        val encrypted = SecretBox.easy(message, nonce, key)
-        val decrypted = SecretBox.openEasy(encrypted, nonce, key)
-        encodedText.value = encrypted.contentToString()
-        delay(5000)
-        encodedText.value = decrypted.decodeFromUByteArray()
-    }
+fun decrypt(encrypted: String): String {
+    val cryptoJS = require("crypto-js")
+    val key = cryptoJS.enc.Base64.parse("b/Gu5posvwDsXjfirtaq4g==")
+    val iv = cryptoJS.enc.Base64.parse("5D9r9ZVzEYYgha93/aUK2w==")
+    return js(
+        "cryptoJS.enc.Utf8.stringify(cryptoJS.AES.decrypt(" +
+                "{ciphertext: cryptoJS.enc.Base64.parse(encrypted)}, key, { iv: iv }))"
+    ) as String
 }
 
-fun ass() {
-    CoroutineScope(Default).launch {
-        encodedText.value = "text1".encodeToByteArray().decodeToString()
-        delay(4000)
-        val aesCbc = CryptographyProvider.WebCrypto
-            .get(AES.CBC)
-        val keyGenerator = aesCbc.keyGenerator(SymmetricKeySize.B256)
-
-        val key: AES.CBC.Key = keyGenerator.generateKey()
-        val cipher = key.cipher()
-        val ciphertext: ByteArray = cipher.encrypt("text1".encodeToByteArray())
-        encodedText.value = ciphertext.joinToString()
-
-        delay(4000)
-
-        encodedText.value = cipher.decrypt(ciphertext).decodeToString()
-        delay(4000)
-        val encodedKey = key.encodeTo(AES.Key.Format.RAW).decodeToString()
-        encodedText.value = encodedKey
-        val decodedKey: AES.CBC.Key = aesCbc.keyDecoder().decodeFrom(AES.Key.Format.RAW, encodedKey.encodeToByteArray())
-        val decodedKeyCipher = decodedKey.cipher()
-        println(decodedKeyCipher.decrypt(ciphertext).decodeToString())
-    }
-}
-
-fun decodeText(text: String, decoded: (String) -> Unit) {
-    CoroutineScope(Default).launch {
-
-    }
-}
+private fun String.decrypting() = if (this != ERROR && isNotEmpty())
+    decrypt(this)
+else "Сообщений пока нет"
 
 private fun String.getMessageModel(key: String, prevDate: String) =
-    with("ass") {
+    with(0) {
         val digit = parseDigit()
         val side = if (digit == myDigit) MY_COLOR
         else CHAT_ID_COLOR
@@ -265,7 +222,7 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
     onLine = getValue(key ?: "", Nodes.ONLINE),
     //isWriting = getValue(pairPath, Nodes.WRITING),
     token = getValue(key ?: "", Nodes.TOKEN),
-    //lastMessage = getValue(pairPath, Nodes.LAST).decrypt().removeKey().ifEmpty { EMPTY },
+    // lastMessage = getValue(pairPath, Nodes.LAST).decrypting().removeKey().ifEmpty { EMPTY },
     iconUri = getValue(key ?: "", Nodes.ICON),
     isFree = getValue("callState", Nodes.CALL) != ANSWER,
     locations = Locations(
