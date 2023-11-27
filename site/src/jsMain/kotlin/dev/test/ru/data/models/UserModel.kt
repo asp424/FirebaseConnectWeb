@@ -1,4 +1,4 @@
-package dev.test.ru.models
+package dev.test.ru.data.models
 
 import dev.test.ru.data.models.Locations
 

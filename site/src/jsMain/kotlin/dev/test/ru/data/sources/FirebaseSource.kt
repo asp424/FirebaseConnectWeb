@@ -1,4 +1,4 @@
-package dev.test.ru.data
+package dev.test.ru.data.sources
 
 import androidx.compose.ui.unit.dp
 import com.lm.firebaseconnect.models.TypeMessage
@@ -10,20 +10,28 @@ import dev.gitlive.firebase.FirebaseOptions
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.database.DataSnapshot
 import dev.gitlive.firebase.database.database
+import dev.gitlive.firebase.database.rethrow
 import dev.gitlive.firebase.initialize
+import dev.test.ru.core.Crypto
 import dev.test.ru.data.models.*
-import dev.test.ru.models.UserModel
-import dev.test.ru.states.UIStates.chatUserDigit
-import dev.test.ru.states.UIStates.encodedText
-import dev.test.ru.states.UIStates.getStatus
-import dev.test.ru.states.UIStates.mainListUsers
-import dev.test.ru.states.UIStates.myDigit
+import dev.test.ru.ui.states.UIStates
+import dev.test.ru.ui.states.UIStates.chatMessages
+import dev.test.ru.ui.states.UIStates.chatUserDigit
+import dev.test.ru.ui.states.UIStates.email
+import dev.test.ru.ui.states.UIStates.encodedText
+import dev.test.ru.ui.states.UIStates.mainListUsers
+import dev.test.ru.ui.states.UIStates.mainProgressIsVisible
+import dev.test.ru.ui.states.UIStates.myDigit
+import dev.test.ru.ui.states.UIStates.password
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private val databaseReference by lazy { Firebase.database(initialize()).reference() }
+
+val crypto by lazy { Crypto() }
+
 fun initialize() =
     Firebase.initialize(
         options = FirebaseOptions(
@@ -52,7 +60,9 @@ fun setAuthStateListener(status: (String) -> Unit) {
                             checkId?.also { myId ->
                                 myDigit = myId
                                 encodedText.value = "ID: $myId"
-
+                                mainProgressIsVisible.value = true
+                                if (email.value.isNotEmpty() && password.value.isNotEmpty())
+                                    save(email.value, Nodes.NAME, path = myId)
                             }
                         }
                     }
@@ -69,17 +79,17 @@ fun signOut() {
 }
 
 fun String.getPairPath(myDigit: String) =
-    if (checkDigits(myDigit, this)) "${F_U_S}${
+    if (checkDigits(myDigit, this)) "$F_U_S${
         maxOf(myDigit.removeZero, removeZero)
-    }${F_U_E}${S_U_S}${minOf(myDigit.removeZero, removeZero)}${S_U_E}"
+    }$F_U_E$S_U_S${minOf(myDigit.removeZero, removeZero)}$S_U_E"
     else "000000"
 
 fun getPairPathFromRemoteMessage(myDigit: String, chatId: String) =
-    if (checkDigits(myDigit, chatId)) "${F_U_S}${
+    if (checkDigits(myDigit, chatId)) "$F_U_S${
         maxOf(myDigit.removeZero, chatId.removeZero)
-    }${F_U_E}${S_U_S}${
+    }$F_U_E$S_U_S${
         minOf(myDigit.removeZero, chatId.removeZero)
-    }${S_U_E}" else "111111"
+    }$S_U_E" else "111111"
 
 private fun checkDigits(myDigit: String, chatId: String) =
     myDigit.any { it.isDigit() } && chatId.any { it.isDigit() }
@@ -92,6 +102,8 @@ private val String.checkId
 
 var mainListJob: Job = Job().apply { cancel() }
 
+var chatJob: Job = Job().apply { cancel() }
+
 var statusJob: Job = Job().apply { cancel() }
 
 fun startMainListListener() {
@@ -103,12 +115,14 @@ fun startMainListListener() {
     }
 }
 
-fun startMessagesListener(onDone: List<MessageModel>.() -> Unit) =
-    CoroutineScope(Default).launch {
-            databaseReference.child(Nodes.CHATS.node())
-                .child(chatUserDigit.getPairPath("32532")).valueEvents.collect {
-                    var prevDate = ""
-                    onDone(it.children.map { v ->
+fun startMessagesListener(onDone: List<MessageModel>.() -> Unit) {
+    chatJob.cancel()
+    chatJob = CoroutineScope(Default).launch {
+        databaseReference.child(Nodes.CHATS.node())
+            .child(chatUserDigit.getPairPath(myDigit)).valueEvents.collect {
+                var prevDate = ""
+                onDone(it.children.map { v ->
+                    with(crypto) {
                         val message = v.value.toString().decrypting()
                         val key = v.key.toString()
                         message.getMessageModel(key, prevDate).apply {
@@ -116,32 +130,12 @@ fun startMessagesListener(onDone: List<MessageModel>.() -> Unit) =
                             //     formatDate(message.parseTimestamp())
                             // }
                         }
-                    })
+                    }
                 }
-        }
-
-external fun require(module: String): dynamic
-
-fun encrypt(normal: String): String {
-    val cryptoJS = require("crypto-js")
-    val key = cryptoJS.enc.Base64.parse("b/Gu5posvwDsXjfirtaq4g==")
-    val iv = cryptoJS.enc.Base64.parse("5D9r9ZVzEYYgha93/aUK2w==")
-    return js("cryptoJS.AES.encrypt(normal, key, { iv: iv}).toString()") as String
+                )
+            }
+    }
 }
-
-fun decrypt(encrypted: String): String {
-    val cryptoJS = require("crypto-js")
-    val key = cryptoJS.enc.Base64.parse("b/Gu5posvwDsXjfirtaq4g==")
-    val iv = cryptoJS.enc.Base64.parse("5D9r9ZVzEYYgha93/aUK2w==")
-    return js(
-        "cryptoJS.enc.Utf8.stringify(cryptoJS.AES.decrypt(" +
-                "{ciphertext: cryptoJS.enc.Base64.parse(encrypted)}, key, { iv: iv }))"
-    ) as String
-}
-
-private fun String.decrypting() = if (this != ERROR && isNotEmpty())
-    decrypt(this)
-else "Сообщений пока нет"
 
 private fun String.getMessageModel(key: String, prevDate: String) =
     with(0) {
@@ -200,6 +194,69 @@ fun String.parseLoadState() =
         else -> LoadImageStates.NULL
     }
 
+fun deleteAllMessages() {
+    CoroutineScope(Default).launch {
+        chatMessages.value.forEach {
+            // if (it.type == TypeMessage.IMAGE || it.type == TypeMessage.VOICE)
+            //    firebaseStorage.delete(it.key, context)
+            // }
+            child(myDigit, chatUserDigit).removeValue()
+            with(
+                crypto.encrypt("Сообщений пока нет")
+            ) {
+                save(this, Nodes.LAST)
+                save(this, Nodes.LAST, child = chatUserDigit)
+            }
+        }
+    }
+}
+
+fun child(
+    myDigit: String,
+    chatId: String
+) = databaseReference.child(Nodes.CHATS.node())
+    .child(chatId.getPairPath(myDigit))
+
+
+fun sendMessage(
+    text: String,
+    newFlag: String = NEW,
+    timeStamp: String = "timestamp",
+    key: String = getNewKey(),
+    name: String = "myName",
+    digit: String = myDigit,
+    chatId: String = chatUserDigit,
+    replyKey: String = "",
+    isSendRemote: Boolean = true,
+) = with(
+    crypto.encrypt(
+        "$newFlag${D_T_S}${digit}${D_T_E}${name}${T_T_S}$timeStamp${
+            T_T_E
+        }$text$R_T_S$replyKey$R_T_E"
+    )
+) {
+    CoroutineScope(Default).launch {
+        child(digit, chatId).updateChildren(mapOf(key to this@with))
+        save(
+            this@with, Nodes.LAST, myDigit = digit,
+            chatId = chatId,
+            child = digit
+        ) {
+            save(
+                this@with, Nodes.LAST, myDigit = digit,
+                chatId = chatId,
+                child = chatId
+            ) {
+                //if (newFlag.isNotEmpty() && isSendRemote)
+                // firebaseConnect.remoteMessages.message(text, key); onSend()
+            }
+        }
+    }
+}
+
+fun getNewKey() = databaseReference.push().key.toString()
+
+//val currentTimeStamp get() = Calendar.getInstance().time.time.toString()
 private fun String.getName() = substringAfter(D_T_E).substringBefore(T_T_S)
 
 private fun String.parseDigit() = substringAfter(D_T_S).substringBefore(D_T_E)
@@ -222,7 +279,8 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
     onLine = getValue(key ?: "", Nodes.ONLINE),
     //isWriting = getValue(pairPath, Nodes.WRITING),
     token = getValue(key ?: "", Nodes.TOKEN),
-    // lastMessage = getValue(pairPath, Nodes.LAST).decrypting().removeKey().ifEmpty { EMPTY },
+    //lastMessage = with(crypto){ getValue(pairPath, Nodes.LAST)
+    //     .decrypting().removeKey().ifEmpty { EMPTY } },
     iconUri = getValue(key ?: "", Nodes.ICON),
     isFree = getValue("callState", Nodes.CALL) != ANSWER,
     locations = Locations(
@@ -235,12 +293,34 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
 fun DataSnapshot.getValue(path: String, node: Nodes) =
     child(node.node()).child(path).value?.run { toString() } ?: ""
 
-suspend fun authWithEmail(email: String, password: String) {
-    fBAuth.createUserWithEmailAndPassword(email, password)
+suspend fun authWithEmail(email: String, password: String, onGood: (String) -> Unit) {
+    fBAuth.createUserWithEmailAndPassword(email, password).rethrow {
+        user?.uid?.checkId?.apply {
+            onGood(this)
+        }
+    }
 }
 
-suspend fun signInWithEmail(email: String, password: String) {
-    fBAuth.signInWithEmailAndPassword(email, password)
+suspend fun signInWithEmail(email: String, password: String, onGood: (String) -> Unit) {
+    fBAuth.signInWithEmailAndPassword(email, password).rethrow {
+        user?.uid?.checkId?.apply {
+            onGood(this)
+        }
+    }
+}
+
+fun save(
+    value: String,
+    node: Nodes,
+    myDigit: String = UIStates.myDigit,
+    chatId: String = chatUserDigit,
+    child: String = myDigit,
+    path: String = chatId.getPairPath(myDigit),
+    onSave: () -> Unit = {}
+) {
+    CoroutineScope(Default).launch {
+        databaseReference.child(child).child(node.node()).updateChildren(mapOf(path to value))
+    }
 }
 
 const val F_U_S = "<f>"

@@ -1,4 +1,4 @@
-package dev.test.ru.pages
+package dev.test.ru.ui.screens
 
 import androidx.compose.runtime.Composable
 import com.varabyte.kobweb.compose.foundation.layout.Box
