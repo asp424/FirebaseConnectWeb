@@ -6,8 +6,10 @@ import androidx.compose.web.events.SyntheticWheelEvent
 import com.varabyte.kobweb.compose.ui.Alignment
 import com.varabyte.kobweb.compose.ui.Modifier
 import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
+import dev.test.ru.ui.states.AuthType
 import dev.test.ru.ui.states.UIStates.mainListUsers
 import dev.test.ru.ui.states.UIStates.screenHeight
+import kotlinx.coroutines.*
 import org.jetbrains.compose.web.css.CSSNumeric
 import org.jetbrains.compose.web.dom.Div
 
@@ -15,6 +17,7 @@ fun Modifier.borderRadius(alignment: Alignment, radius: CSSNumeric) =
     if (alignment == Alignment.CenterStart)
         borderRadius(topRight = radius, bottomRight = radius, bottomLeft = radius)
     else borderRadius(topRight = radius, bottomLeft = radius, topLeft = radius)
+
 @Composable
 fun div(
     styleProperty: String = "",
@@ -37,3 +40,5 @@ fun SyntheticWheelEvent.scrollLogicMainListUsers(y: MutableState<Double>) {
     }
     if (y.value > 6) y.value = 6.0
 }
+
+

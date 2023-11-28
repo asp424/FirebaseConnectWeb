@@ -26,18 +26,9 @@ fun MainScreen() {
 
     var isExpandedMain by remember { mutableStateOf(false) }
 
-    var isExpandedColumn by remember { mutableStateOf(false) }
-
     LaunchedEffect(true) { startMainListListener() }
 
     var isBigMessages by remember { mutableStateOf(false) }
-
-    LaunchedEffect(mainListUsers.value) {
-        if (mainListUsers.value.isNotEmpty() && !isExpandedColumn) {
-            delay(500)
-            isExpandedColumn = true
-        }
-    }
 
     Row(Modifier.fillMaxWidth().padding(top = 40.px), Arrangement.Center) {
 

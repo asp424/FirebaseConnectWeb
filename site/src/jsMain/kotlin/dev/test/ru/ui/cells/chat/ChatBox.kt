@@ -5,13 +5,13 @@ import dev.test.div
 
 
 @Composable
-fun chatBox(isExpandedMain: Boolean, onInvisibleChatBox: () -> Unit) {
+fun chatBox(isExpandedMain: Boolean, onInvisibleChatBoxs: () -> Unit) {
 
     var y by remember { mutableStateOf(0.0) }
 
     var inputIsVisible by remember { mutableStateOf(false) }
 
-    chatWindow(isExpandedMain, onInvisibleChatBox, {
+    chatWindow(isExpandedMain, { onInvisibleChatBoxs(); inputIsVisible = false }, {
         inputIsVisible = true
     }) {
 

@@ -1,6 +1,7 @@
 package dev.test.ru.ui.cells.chat
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import com.varabyte.kobweb.compose.foundation.layout.Arrangement
@@ -22,10 +23,9 @@ fun inputBar(inputIsVisible: Boolean) {
 
     var textMessage by remember { mutableStateOf("") }
 
-
     Row(
         Modifier.margin(top = (screenHeight - animateDpAsState(
-                if (inputIsVisible) 100.dp else ((-200).dp)
+                if (inputIsVisible) 100.dp else ((-200).dp), tween(500)
         ).value.value).px
         ), Arrangement.Center, Alignment.CenterVertically
     ) {

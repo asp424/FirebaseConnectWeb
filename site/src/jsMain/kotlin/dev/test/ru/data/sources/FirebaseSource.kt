@@ -18,7 +18,7 @@ import dev.test.ru.ui.states.UIStates
 import dev.test.ru.ui.states.UIStates.chatMessages
 import dev.test.ru.ui.states.UIStates.chatUserDigit
 import dev.test.ru.ui.states.UIStates.email
-import dev.test.ru.ui.states.UIStates.encodedText
+import dev.test.ru.ui.states.UIStates.myIdText
 import dev.test.ru.ui.states.UIStates.mainListUsers
 import dev.test.ru.ui.states.UIStates.mainProgressIsVisible
 import dev.test.ru.ui.states.UIStates.myDigit
@@ -59,10 +59,10 @@ fun setAuthStateListener(status: (String) -> Unit) {
                         it.uid.apply {
                             checkId?.also { myId ->
                                 myDigit = myId
-                                encodedText.value = "ID: $myId"
+                                myIdText.value = "ID: $myId"
                                 mainProgressIsVisible.value = true
-                                if (email.value.isNotEmpty() && password.value.isNotEmpty())
-                                    save(email.value, Nodes.NAME, path = myId)
+                                        email.value = ""
+                                        password.value = ""
                             }
                         }
                     }
