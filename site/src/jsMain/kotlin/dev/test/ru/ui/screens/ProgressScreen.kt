@@ -8,9 +8,4 @@ import com.varabyte.kobweb.compose.ui.modifiers.fillMaxSize
 import org.jetbrains.compose.web.dom.Progress
 
 @Composable
-fun ProgressScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center)
-    {
-        Progress { }
-    }
-}
+fun progressScreen() = Box(Modifier.fillMaxSize(), Alignment.Center) { Progress { } }

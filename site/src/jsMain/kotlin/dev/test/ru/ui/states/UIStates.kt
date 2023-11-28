@@ -8,6 +8,7 @@ import kotlinx.browser.window
 object UIStates {
     var mainListUsers = mutableStateOf(listOf<UserModel>())
     var chatMessages = mutableStateOf(listOf<MessageModel>())
+    val isShowAbleInfoBox get() = chatIndex.value >= 0 && mainListUsers.value.isNotEmpty()
     var encodedText = mutableStateOf("ass")
     var chatIndex = mutableStateOf(-1)
     var mainScreenIsVisible = mutableStateOf("0")

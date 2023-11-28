@@ -12,8 +12,8 @@ version = "1.0-SNAPSHOT"
 
 kobweb {
     app {
-        index {
-            description.set("Powered by Kobweb")
+        index{
+
         }
     }
 }
@@ -30,6 +30,7 @@ kotlin {
                 implementation("dev.gitlive:firebase-common:1.10.4")
                 implementation("dev.gitlive:firebase-storage:1.10.4")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1")
             }
         }
         val jsMain by getting {
