@@ -41,7 +41,7 @@ fun RegScreen() {
 
     val progressScale = animateFloatAsState(if (progress.value) 1f else 0f).value
 
-    var textErrorScaleBool = remember { mutableStateOf(false) }
+    val textErrorScaleBool = remember { mutableStateOf(false) }
 
     val textErrorScale = animateFloatAsState(
         if (textErrorScaleBool.value) 5f else 0.8f, tween(1000),

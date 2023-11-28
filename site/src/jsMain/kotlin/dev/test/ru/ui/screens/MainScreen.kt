@@ -9,7 +9,6 @@ import dev.test.ru.data.sources.chatJob
 import dev.test.ru.data.sources.mainListJob
 import dev.test.ru.data.sources.startMainListListener
 import dev.test.ru.ui.states.UIStates.chatMessages
-import dev.test.ru.ui.states.UIStates.mainListUsers
 import dev.test.ru.ui.cells.chat.chatBox
 import dev.test.ru.ui.cells.all.header
 import dev.test.ru.ui.cells.users_list.userCards

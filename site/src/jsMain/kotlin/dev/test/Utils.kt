@@ -6,10 +6,8 @@ import androidx.compose.web.events.SyntheticWheelEvent
 import com.varabyte.kobweb.compose.ui.Alignment
 import com.varabyte.kobweb.compose.ui.Modifier
 import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
-import dev.test.ru.ui.states.AuthType
 import dev.test.ru.ui.states.UIStates.mainListUsers
 import dev.test.ru.ui.states.UIStates.screenHeight
-import kotlinx.coroutines.*
 import org.jetbrains.compose.web.css.CSSNumeric
 import org.jetbrains.compose.web.dom.Div
 
