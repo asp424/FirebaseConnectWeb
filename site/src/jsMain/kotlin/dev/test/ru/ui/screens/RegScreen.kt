@@ -66,7 +66,10 @@ fun RegScreen() {
         TextInput(email.value) {
             placeholder("Email")
             style { width(200.px); height(30.px); marginBottom(10.px); marginTop(10.px) }
-            onInput { s -> filterEmail(s) }
+            onInput { s ->
+                email.value = s.value
+               // filterEmail(s)
+            }
         }
 
         TextInput(password.value) {

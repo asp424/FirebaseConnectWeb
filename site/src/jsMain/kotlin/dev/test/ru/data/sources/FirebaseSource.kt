@@ -13,24 +13,54 @@ import dev.gitlive.firebase.database.database
 import dev.gitlive.firebase.database.rethrow
 import dev.gitlive.firebase.initialize
 import dev.test.ru.core.Crypto
+import dev.test.ru.data.*
 import dev.test.ru.data.models.*
 import dev.test.ru.ui.states.UIStates
 import dev.test.ru.ui.states.UIStates.chatMessages
 import dev.test.ru.ui.states.UIStates.chatUserDigit
 import dev.test.ru.ui.states.UIStates.email
-import dev.test.ru.ui.states.UIStates.myIdText
 import dev.test.ru.ui.states.UIStates.mainListUsers
 import dev.test.ru.ui.states.UIStates.mainProgressIsVisible
 import dev.test.ru.ui.states.UIStates.myDigit
+import dev.test.ru.ui.states.UIStates.myIdText
 import dev.test.ru.ui.states.UIStates.password
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.http.HttpHeaders.Authorization
+import io.ktor.utils.io.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 private val databaseReference by lazy { Firebase.database(initialize()).reference() }
 
 val crypto by lazy { Crypto() }
+
+val firebaseParser by lazy { FirebaseParser() }
+
+val fBAuth by lazy { Firebase.auth(initialize()) }
+
+var mainListJob: Job = Job().apply { cancel() }
+
+var chatJob: Job = Job().apply { cancel() }
+
+var statusJob: Job = Job().apply { cancel() }
+
+private val client by lazy { HttpClient() }
+
+fun signOut() {
+    CoroutineScope(Default).launch { fBAuth.signOut() }
+}
+
+fun getNewKey() = databaseReference.push().key.toString()
 
 fun initialize() =
     Firebase.initialize(
@@ -46,8 +76,6 @@ fun initialize() =
         )
     )
 
-val fBAuth by lazy { Firebase.auth(initialize()) }
-
 fun setAuthStateListener(status: (String) -> Unit) {
     statusJob.cancel()
     statusJob = CoroutineScope(Default).launch {
@@ -61,20 +89,14 @@ fun setAuthStateListener(status: (String) -> Unit) {
                                 myDigit = myId
                                 myIdText.value = "ID: $myId"
                                 mainProgressIsVisible.value = true
-                                        email.value = ""
-                                        password.value = ""
+                                email.value = ""
+                                password.value = ""
                             }
                         }
                     }
                 }
             )
         }
-    }
-}
-
-fun signOut() {
-    CoroutineScope(Default).launch {
-        fBAuth.signOut()
     }
 }
 
@@ -100,11 +122,6 @@ private val String.removeZero
 private val String.checkId
     get() = if (isNotEmpty()) filter { v -> v.isDigit() && v != '0' } else null
 
-var mainListJob: Job = Job().apply { cancel() }
-
-var chatJob: Job = Job().apply { cancel() }
-
-var statusJob: Job = Job().apply { cancel() }
 
 fun startMainListListener() {
     mainListJob.cancel()
@@ -139,32 +156,34 @@ fun startMessagesListener(onDone: List<MessageModel>.() -> Unit) {
 
 private fun String.getMessageModel(key: String, prevDate: String) =
     with(0) {
-        val digit = parseDigit()
+        val digit = with(firebaseParser) { parseDigit() }
         val side = if (digit == myDigit) MY_COLOR
         else CHAT_ID_COLOR
         val wasRead = if (side == MY_COLOR && !startsWith(NEW)) 1.dp else 0.dp
-        //val date = formatDate(parseTimestamp())
+        val date = with(firebaseParser) { parseTimestamp() }
         val type = when {
             contains(IS_RECORD) -> TypeMessage.VOICE
             contains(IS_IMAGE) -> TypeMessage.IMAGE
             else -> TypeMessage.MESSAGE
         }
         val isNew = startsWith(NEW)
-        val replyKey = getReplyKey()
+        val replyKey = with(firebaseParser) { getReplyKey() }
         val isReply = replyKey.isNotEmpty()
         MessageModel(
             type = type,
-            text = getText(),
+            text = with(firebaseParser) { getText() },
             alignment = if (side == MY_COLOR) Alignment.CenterEnd else Alignment.CenterStart,
             key = key,
             //time = getTimeToMessage(),
-            timeStamp = parseTimestamp(),
-            name = getName(),
+            timeStamp = with(firebaseParser) { parseTimestamp() }.apply {
+
+            },
+            name = with(firebaseParser) { getName() },
             wasRead = wasRead,
             wasReadColor = if (side == MY_COLOR && wasRead == 1.dp) Green else Gray,
             digit = digit,
             mustSetWasRead = side != MY_COLOR && isNew,
-            // date = formatDate(parseTimestamp()),
+            // date = formatTimestamp(parseTimestamp()),
             // isNewDate = prevDate != date,
             topStartShape = if (side == MY_COLOR) 20.dp else 0.dp,
             bottomEndShape = if (side == MY_COLOR) 0.dp else 20.dp,
@@ -174,13 +193,13 @@ private fun String.getMessageModel(key: String, prevDate: String) =
         ).apply {
             if (type == TypeMessage.IMAGE)
                 imageMessage = ImageModel(
-                    getLocalImageUri(), parseLoadState(), key
+                    with(firebaseParser) { getLocalImageUri() }, parseLoadState(), key
                 ).apply {
                     if (uploadState != LoadImageStates.NULL && alignment == Alignment.CenterStart)
                         isShow = false
                 }
             if (type == TypeMessage.VOICE)
-                voiceTimeStamp = getVoiceTimestamp()
+                voiceTimeStamp = with(firebaseParser) { getVoiceTimestamp() }
         }
     }
 
@@ -196,7 +215,7 @@ fun String.parseLoadState() =
 
 fun deleteAllMessages() {
     CoroutineScope(Default).launch {
-        chatMessages.value.forEach {
+        chatMessages.value.forEach { _ ->
             // if (it.type == TypeMessage.IMAGE || it.type == TypeMessage.VOICE)
             //    firebaseStorage.delete(it.key, context)
             // }
@@ -211,12 +230,8 @@ fun deleteAllMessages() {
     }
 }
 
-fun child(
-    myDigit: String,
-    chatId: String
-) = databaseReference.child(Nodes.CHATS.node())
+fun child(myDigit: String, chatId: String) = databaseReference.child(Nodes.CHATS.node())
     .child(chatId.getPairPath(myDigit))
-
 
 fun sendMessage(
     text: String,
@@ -254,24 +269,7 @@ fun sendMessage(
     }
 }
 
-fun getNewKey() = databaseReference.push().key.toString()
-
 //val currentTimeStamp get() = Calendar.getInstance().time.time.toString()
-private fun String.getName() = substringAfter(D_T_E).substringBefore(T_T_S)
-
-private fun String.parseDigit() = substringAfter(D_T_S).substringBefore(D_T_E)
-
-private fun String.removeKey() = substringAfter("):")
-
-private fun String.getReplyKey() = substringAfter(R_T_S).substringBefore(R_T_E)
-
-private fun String.getText() = substringAfter(T_T_E).substringBefore(R_T_S)
-
-private fun String.getVoiceTimestamp() = substringAfter(IS_RECORD).substringBefore(R_T_S)
-
-private fun String.getLocalImageUri() = substringAfter(IS_IMAGE).substringBefore(T_I_S)
-
-fun String.parseTimestamp() = substringAfter(T_T_S).substringBefore(T_T_E)
 
 fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
     id = key ?: "",
@@ -279,7 +277,7 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
     onLine = getValue(key ?: "", Nodes.ONLINE),
     //isWriting = getValue(pairPath, Nodes.WRITING),
     token = getValue(key ?: "", Nodes.TOKEN),
-    //lastMessage = with(crypto){ getValue(pairPath, Nodes.LAST)
+    // lastMessage = with(crypto){ getValue(pairPath, Nodes.LAST)
     //     .decrypting().removeKey().ifEmpty { EMPTY } },
     iconUri = getValue(key ?: "", Nodes.ICON),
     isFree = getValue("callState", Nodes.CALL) != ANSWER,
@@ -290,22 +288,22 @@ fun DataSnapshot.getUserModel(pairPath: String) = UserModel(
     )
 )
 
+fun a() {
+    console.log(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()))
+}
+
 fun DataSnapshot.getValue(path: String, node: Nodes) =
     child(node.node()).child(path).value?.run { toString() } ?: ""
 
 suspend fun authWithEmail(email: String, password: String, onGood: (String) -> Unit) {
     fBAuth.createUserWithEmailAndPassword(email, password).rethrow {
-        user?.uid?.checkId?.apply {
-            onGood(this)
-        }
+        user?.uid?.checkId?.apply { onGood(this) }
     }
 }
 
 suspend fun signInWithEmail(email: String, password: String, onGood: (String) -> Unit) {
     fBAuth.signInWithEmailAndPassword(email, password).rethrow {
-        user?.uid?.checkId?.apply {
-            onGood(this)
-        }
+        user?.uid?.checkId?.apply { onGood(this) }
     }
 }
 
@@ -323,58 +321,29 @@ fun save(
     }
 }
 
-const val F_U_S = "<f>"
-const val F_U_E = "<*f>"
-const val S_U_S = "<s>"
-const val S_U_E = "<*s>"
-const val D_T_S = "<N>"
-const val D_T_E = "</N>"
-const val MY_COLOR = "green"
-const val CHAT_ID_COLOR = "black"
-const val IS_RECORD = "<*R>isRecord<*/R>"
-const val IS_IMAGE = "<*I>isImage<*/I>"
-const val I_L_S = "<*IL>"
-const val I_L_E = "<*/IL>"
-const val USER_DELIMITER_START = "<*US>"
-const val USER_DELIMITER_END = "<*/US>"
-const val T_I_S = "<*TI>"
-const val T_I_E = "<*/TI>"
-const val NEW = "<*New>"
-const val R_T_S = "<*RP>"
-const val R_T_E = "<*/RP>"
-const val EMPTY = "empty"
-const val ERROR = "error"
-const val TOKEN = "registration_ids"
-const val DATA = "data"
-const val NAME = "name"
-const val ICON = "icon"
-const val TITLE = "title"
-const val KEY = "keyMessage"
-const val PAIR_PATH = "pairPath"
-const val TYPE_MESSAGE = "typeMessage"
-const val INCOMING_CALL = "incomingCall"
-const val OUTGOING_CALL = "outgoingCall"
-const val CALL = "call"
-const val CALL_STATE = "callState"
-const val CALL_TYPE = "callType"
-const val ANSWER = "answer"
-const val REJECT = "reject"
-const val RESET = "reset"
-const val MESSAGE = "message"
-const val WAIT = "wait"
-const val BUSY = "busy"
-const val GET_INCOMING_CALL = "getIncomingCall"
-const val INCOMING_CALL_FROM_NOTIFY = "incomingCallFromNotify"
-const val CALLING_ID = "callingId"
-const val DESTINATION_ID = "destinationId"
-const val GET_CHECK_FOR_CALL = "getCheckForCall"
-const val CHECK_FOR_CALL = "checkForCall"
-const val NOTIFY_CALLBACK = "notifyCallback"
-const val REJECTED_CALL = "rejectedCall"
-const val VOICE = "voice"
-const val VIDEO = "video"
-const val T_T_S = "<T>"
-const val T_T_E = "</T>"
+@OptIn(InternalAPI::class)
+suspend fun ass() {
+    val response = client.post{
+        url("https://fcm.googleapis.com/fcm/")
+        headers {
+            append(
+                Authorization,
+                "key=AAAAoyEPC5o:APA91bFan2FPNVGsLjebfDbm51TUz0-KPhcl86TZe9CwyYoOmTr631B5Axd7eRJ3qfg5PUC4SAKCJkndfmPCf2rq7fl9X1xzkFsitgiqQbQq4gtRHAc3keGyKoIs1O4TzNPSdgBT5HbK"
+            )
+            append(HttpHeaders.ContentType, ContentType.Application.Json)
+        }
+        body = buildJsonObject {
+            put(
+                "to",
+                "esWFmMQNREuXuF1-JrQ0Ul:APA91bHoddkj6PVdqdXjA68uod6zbe53tUIuuJG0Rd_jVeGXh8QLQzybglYlog1mbF9RmHGvIdSz3PRVQTvDt9GMKwXiMhnP2FWqCT98LtE0PpL1sAzO1-l6c671GHgOdOY6LbopkOUB"
+            )
+            putJsonObject(DATA) { put(TYPE_MESSAGE, "ass"); put(TOKEN, "ass"); put(MESSAGE, "Hello") }
+        }.toString()
+    }
+    client.close()
+    console.log(response)
+}
+
 
 
 

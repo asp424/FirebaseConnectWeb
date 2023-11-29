@@ -7,14 +7,15 @@ import com.varabyte.kobweb.compose.ui.modifiers.border
 import com.varabyte.kobweb.compose.ui.modifiers.borderRadius
 import com.varabyte.kobweb.compose.ui.modifiers.margin
 import com.varabyte.kobweb.silk.components.graphics.Image
-import dev.test.ru.ui.states.UIStates
+import dev.test.ru.ui.states.UIStates.chatIndex
+import dev.test.ru.ui.states.UIStates.mainListUsers
 import org.jetbrains.compose.web.css.LineStyle
 import org.jetbrains.compose.web.css.px
 
 @Composable
 fun userIcon() {
     Image(
-        UIStates.mainListUsers.value[UIStates.chatIndex.value].iconUri, width = 35, height = 35,
+        mainListUsers.value[chatIndex.value].iconUri, width = 35, height = 35,
         modifier = Modifier.border(1.px, LineStyle.Outset, color = Colors.Black)
             .borderRadius(30.px).margin(left = 7.px).margin(left = 40.px)
     )

@@ -3,7 +3,7 @@ package dev.test.ru.ui.cells.chat
 import androidx.compose.runtime.Composable
 import com.varabyte.kobweb.compose.foundation.layout.Box
 import com.varabyte.kobweb.compose.ui.Modifier
-import com.varabyte.kobweb.compose.ui.graphics.Colors
+import com.varabyte.kobweb.compose.ui.graphics.Colors.White
 import com.varabyte.kobweb.compose.ui.modifiers.width
 import dev.test.ru.ui.states.UIStates.chatIndex
 import dev.test.ru.ui.states.UIStates.mainListUsers
@@ -19,9 +19,9 @@ import org.jetbrains.compose.web.dom.Text
 fun chatIdText() {
     P({ style { paddingBottom(15.px); paddingLeft(90.px) } }) {
 
-        B({ style { color(Colors.White) } }) {
+        B({ style { color(White) } }) {
 
-            Box(modifier = Modifier.width(100.px)) {
+            Box(modifier = Modifier.width(200.px)) {
 
                 Text(
                     mainListUsers.value[chatIndex.value].name.ifEmpty {

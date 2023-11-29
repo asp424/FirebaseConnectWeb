@@ -8,6 +8,7 @@ import dev.test.ru.data.models.UserModel
 import dev.test.ru.data.sources.authWithEmail
 import dev.test.ru.data.sources.save
 import dev.test.ru.data.sources.signInWithEmail
+import dev.test.ru.ui.states.UIStates.set
 import kotlinx.browser.window
 import kotlinx.coroutines.*
 import org.jetbrains.compose.web.events.SyntheticInputEvent
@@ -87,24 +88,22 @@ object UIStates {
         }
     }
 
+
     fun filterEmail(s: SyntheticInputEvent<String, HTMLInputElement>) {
-        val c = s.data ?: ""
-        val b = with(s.data?.single() ?: 'n') { this == '@' }
-        val d = !s.value.aroundChar(c).contains('@') && s.value.first() != '@' && !s.value.aroundChar(c).contains('@')
+        s.data?.apply {
 
-        if (b) {
+            if (single() == '@') {
+                if (!s.value.aroundChar(this).contains('@')) s.set
+            }
 
-            if (d) email.value = s.value
-
-
-
-        } else {
-            email.value = s.value.filter {
+            else email.value = s.value.filter {
                 if (it != '@') it.isLetterOrDigit() else true
             }
-        }
+
+        }?:"".apply { s.set }
     }
+
+    private val SyntheticInputEvent<String, HTMLInputElement>.set get() = run { email.value = value }
+    private fun String.aroundChar(char: String) = "${substringBefore(char)}${substringAfter(char)}"
 }
 
-fun String.aroundChar(char: String) =
-    "${substringBefore(char)}${substringAfter(char)}"

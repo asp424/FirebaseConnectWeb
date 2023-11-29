@@ -25,7 +25,7 @@ fun headerInfo(onClick: () -> Unit) {
         Arrangement.SpaceBetween, Alignment.CenterVertically
     ) {
 
-        Ol({ style { color(White) } }) { Text("Kilogram v.1.0") }
+        Ol({ style { color(White) } }) { Text("Kilogram web v.1.0") }
         Ol({ style { color(White); marginRight(120.px) } }) { Text(myIdText.value) }
         FaIcons(Modifier.onClick { onClick() }.color(White))
     }

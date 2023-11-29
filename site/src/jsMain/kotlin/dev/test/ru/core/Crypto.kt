@@ -1,6 +1,6 @@
 package dev.test.ru.core
 
-import dev.test.ru.data.sources.ERROR
+import dev.test.ru.data.ERROR
 external fun require(module: String): dynamic
 
 class Crypto {
